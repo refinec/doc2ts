@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useRef, useState, useEffect, useCallback } from "react"
 import { Card, Input, Space, Button, message } from "antd"
 import "./index.less"
 import axios from "axios"
+import hljs from 'highlight.js/lib/core';
+import highJson from 'highlight.js/lib/languages/json';
+import 'highlight.js/styles/github.css'
+hljs.registerLanguage('json', highJson);
 
 const instance = axios.create({
     baseURL: import.meta.env.DEV ? import.meta.env.BASE_URL : '',
@@ -15,7 +19,8 @@ const Yapi: React.FC = () => {
     const [cookieValue, setCookieValue] = useState<string>("")
     const [requestUrl, setRequestUrl] = useState<string>()
     const [requestQuery, setRequestQuery] = useState<string>()
-
+    const requestCodeRef = useRef<HTMLElement>(null);
+    const responseCodeRef = useRef<HTMLElement>(null);
     const handleSetCookieValue = useCallback(() => {
         cookieValue.split(";").forEach(item => {
             const [key, value] = item.split("=")
@@ -66,10 +71,14 @@ const Yapi: React.FC = () => {
             .get(import.meta.env.DEV ? `/api?id=${requestQuery}` : `${requestUrl}?id=${requestQuery}`)
             .then(res => {
                 const { data } = res.data
-                const { req_query, res_body } = data
-                const { properties } = JSON.parse(res_body)
-                console.log(req_query, properties)
-                
+                const { req_query, req_body_other, res_body } = data
+                const { properties: _res_body } = JSON.parse(res_body)
+                const { properties: _req_body_other } = JSON.parse(req_body_other)
+                console.log(req_query, req_body_other, _res_body)
+                const requestCode = hljs.highlight(JSON.stringify(_req_body_other, null, 2), { language: 'json' }).value;
+                const responseCode = hljs.highlight(JSON.stringify(_res_body, null, 2), { language: 'json' }).value;
+                requestCodeRef.current!.innerHTML = requestCode
+                responseCodeRef.current!.innerHTML = responseCode
             })
             .catch(err => {
                 message.error(err?.message || "请求失败")
@@ -91,7 +100,24 @@ const Yapi: React.FC = () => {
                 </Space.Compact>
                 {requestUrl && <div className="url-tip">{`${requestUrl}?id=${requestQuery}`}</div>}
             </Card>
-            <Card style={{ width: '100%', marginTop: 10 }}></Card>
+            <Card style={{ width: '100%', marginTop: 10 }}>
+                <Card.Grid hoverable={false} style={{
+                    width: '50%',
+                    textAlign: 'center',
+                }}>
+                    <pre>
+                        <code ref={requestCodeRef} />
+                    </pre>
+                </Card.Grid>
+                <Card.Grid hoverable={false} style={{
+                    width: '50%',
+                    textAlign: 'center',
+                }}>
+                    <pre>
+                        <code ref={responseCodeRef} />
+                    </pre>
+                </Card.Grid>
+            </Card>
         </section>
     )
 }

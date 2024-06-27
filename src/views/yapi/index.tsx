@@ -2,10 +2,12 @@ import React, { useRef, useState, useEffect, useCallback } from "react"
 import { Card, Input, Space, Button, message } from "antd"
 import "./index.less"
 import axios from "axios"
+
+import { TS_TYPE_MAP } from '@/views/yapi/constants'
 import hljs from 'highlight.js/lib/core';
-import highJson from 'highlight.js/lib/languages/json';
-import 'highlight.js/styles/github.css'
-hljs.registerLanguage('json', highJson);
+import highTS from 'highlight.js/lib/languages/typescript';
+import 'highlight.js/styles/dark.css'
+hljs.registerLanguage('typescript', highTS);
 
 const instance = axios.create({
     baseURL: import.meta.env.DEV ? import.meta.env.BASE_URL : '',
@@ -19,8 +21,8 @@ const Yapi: React.FC = () => {
     const [cookieValue, setCookieValue] = useState<string>("")
     const [requestUrl, setRequestUrl] = useState<string>()
     const [requestQuery, setRequestQuery] = useState<string>()
-    const requestCodeRef = useRef<HTMLElement>(null);
-    const responseCodeRef = useRef<HTMLElement>(null);
+    const requestCodeRef = useRef<HTMLElement>(null)
+    const responseCodeRef = useRef<HTMLElement>(null)
     const handleSetCookieValue = useCallback(() => {
         cookieValue.split(";").forEach(item => {
             const [key, value] = item.split("=")
@@ -63,22 +65,88 @@ const Yapi: React.FC = () => {
         setReUrl()
     }, [])
 
+    /**
+     * 填充缩进
+     * @param num 数量
+     * @param flag 
+     */
+    const fillIndent = (num: number = 1, flag: string = '    ') => {
+        return new Array(num).fill(flag).join('')
+    }
+    const getFormatObj = (obj: any, requiredArr: string[] = [], recursionCount: number = 1) => {
+        let formatObj: string = ''
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const { type = '', description, enumDesc } = obj[key]
+                if (['array', 'object'].includes(type)) {
+                    let properties: any
+                    switch (type) {
+                        case 'array':
+                            properties = obj[key].items.properties
+                            break
+                        case 'object':
+                            properties = obj[key].properties
+                            break
+                        default:
+                            properties = {}
+                            break
+                    }
+                    formatObj += `
+${fillIndent(recursionCount)}/** ${description} */
+${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1)}`
+                    continue
+                }
+                formatObj += `
+${fillIndent(recursionCount)}/** ${description.replaceAll('\n', ' ') + (enumDesc ? ` ${enumDesc.replaceAll('\n', ' ')}` : '')} */
+${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`
+            }
+        }
+        formatObj = `{${formatObj}
+${fillIndent(recursionCount - 1)}}`
+        return formatObj
+    }
+
     const handleToSearch = useCallback(() => {
         if (!requestUrl || !requestQuery) {
             return
         }
         instance
             .get(import.meta.env.DEV ? `/api?id=${requestQuery}` : `${requestUrl}?id=${requestQuery}`)
-            .then(res => {
+            .then((res: any) => {
                 const { data } = res.data
-                const { req_query, req_body_other, res_body } = data
+                const { req_query, req_body_other, res_body, errmsg } = data || {}
+                if (errmsg) {
+                    message.error(errmsg)
+                    return
+                }
+                // GET请求参数
+                if (req_query && req_query.length) {
+                    let formatObj: string = ''
+                    for (const item of req_query) {
+                        const { desc, name, required } = item
+                        formatObj += `${desc ? `
+    /** ${desc} */` : ''}
+    ${name}${required == 0 ? '?:' : ':'} string
+`
+                    }
+                    formatObj = `{${formatObj}}`
+                    const requestCode = hljs.highlight(formatObj, { language: 'typescript' }).value;
+                    requestCodeRef.current!.innerHTML = requestCode
+                }
+                // POST 请求参数
+                if (req_body_other && req_body_other.length) {
+                    const { properties: _req_body_other, required: requestRequired } = JSON.parse(req_body_other)
+                    const formatObj = getFormatObj(_req_body_other, requestRequired)
+                    const requestCode = hljs.highlight(formatObj, { language: 'typescript' }).value;
+                    requestCodeRef.current!.innerHTML = requestCode
+                }
+                // 响应数据
                 const { properties: _res_body } = JSON.parse(res_body)
-                const { properties: _req_body_other } = JSON.parse(req_body_other)
-                console.log(req_query, req_body_other, _res_body)
-                const requestCode = hljs.highlight(JSON.stringify(_req_body_other, null, 2), { language: 'json' }).value;
-                const responseCode = hljs.highlight(JSON.stringify(_res_body, null, 2), { language: 'json' }).value;
-                requestCodeRef.current!.innerHTML = requestCode
-                responseCodeRef.current!.innerHTML = responseCode
+                if (_res_body) {
+                    const formatObj = getFormatObj(_res_body)
+                    const responseCode = hljs.highlight(formatObj, { language: 'typescript' }).value;
+                    responseCodeRef.current!.innerHTML = responseCode
+                }
             })
             .catch(err => {
                 message.error(err?.message || "请求失败")
@@ -100,19 +168,15 @@ const Yapi: React.FC = () => {
                 </Space.Compact>
                 {requestUrl && <div className="url-tip">{`${requestUrl}?id=${requestQuery}`}</div>}
             </Card>
-            <Card style={{ width: '100%', marginTop: 10 }}>
-                <Card.Grid hoverable={false} style={{
-                    width: '50%',
-                    textAlign: 'center',
-                }}>
+            <Card style={{ width: '100%', height: 'calc(100vh - 230px)', marginTop: 10 }} classNames={{
+                body: "yapi-card-body",
+            }}>
+                <Card.Grid hoverable={false} className="yapi-card-grid grid-first">
                     <pre>
                         <code ref={requestCodeRef} />
                     </pre>
                 </Card.Grid>
-                <Card.Grid hoverable={false} style={{
-                    width: '50%',
-                    textAlign: 'center',
-                }}>
+                <Card.Grid hoverable={false} className="yapi-card-grid grid-second">
                     <pre>
                         <code ref={responseCodeRef} />
                     </pre>

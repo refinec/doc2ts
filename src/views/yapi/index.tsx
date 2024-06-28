@@ -6,7 +6,7 @@ import axios from "axios"
 import { TS_TYPE_MAP } from '@/views/yapi/constants'
 import hljs from 'highlight.js/lib/core';
 import highTS from 'highlight.js/lib/languages/typescript';
-import 'highlight.js/styles/dark.css'
+import 'highlight.js/styles/monokai-sublime.min.css'
 hljs.registerLanguage('typescript', highTS);
 
 const instance = axios.create({
@@ -63,7 +63,9 @@ const Yapi: React.FC = () => {
     useEffect(() => {
         setCookies()
         setReUrl()
-    }, [])
+        hljs.highlightElement(requestCodeRef.current!)
+        hljs.highlightElement(responseCodeRef.current!)
+    }, [requestCodeRef, responseCodeRef])
 
     /**
      * 填充缩进
@@ -73,6 +75,27 @@ const Yapi: React.FC = () => {
     const fillIndent = (num: number = 1, flag: string = '    ') => {
         return new Array(num).fill(flag).join('')
     }
+
+    /**
+     * 移除换行符
+     * @param str 
+     * @param fillSymbol 
+     * @returns 
+     */
+    const removeLineBreak = (str: string, fillSymbol:string = ' ') => {
+        return str.replaceAll(/(\r\n|\r|\n)/g, fillSymbol)
+    }
+
+    /**
+     * 填充格式化代码
+     * @param ref 
+     * @param code 
+     */
+    const setCode = (ref: React.RefObject<HTMLElement>, code: string) => {
+        const requestCode = hljs.highlight(code, { language: 'typescript' }).value;
+        ref.current!.innerHTML = requestCode
+    }
+
     const getFormatObj = (obj: any, requiredArr: string[] = [], recursionCount: number = 1) => {
         let formatObj: string = ''
         for (const key in obj) {
@@ -91,61 +114,66 @@ const Yapi: React.FC = () => {
                             properties = {}
                             break
                     }
-                    formatObj += `
-${fillIndent(recursionCount)}/** ${description} */
-${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1)}`
+                    formatObj += `\n${description ? `${ fillIndent(recursionCount) }/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1)}`
                     continue
                 }
-                formatObj += `
-${fillIndent(recursionCount)}/** ${description.replaceAll('\n', ' ') + (enumDesc ? ` ${enumDesc.replaceAll('\n', ' ')}` : '')} */
-${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`
+                formatObj += `\n${(enumDesc || description) ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description) + (enumDesc ? ` ${removeLineBreak(enumDesc)}` : '')} */\n` : ''}${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`
             }
         }
-        formatObj = `{${formatObj}
-${fillIndent(recursionCount - 1)}}`
+        formatObj = `{${formatObj}\n${fillIndent(recursionCount - 1)}}`
         return formatObj
     }
 
     const handleToSearch = useCallback(() => {
+
         if (!requestUrl || !requestQuery) {
             return
         }
+        
         instance
             .get(import.meta.env.DEV ? `/api?id=${requestQuery}` : `${requestUrl}?id=${requestQuery}`)
             .then((res: any) => {
                 const { data } = res.data
-                const { req_query, req_body_other, res_body, errmsg } = data || {}
+                const { req_query, req_body_form, req_body_other, res_body, errmsg } = data || {}
                 if (errmsg) {
                     message.error(errmsg)
                     return
                 }
+
+                setCode(requestCodeRef, '')
                 // GET请求参数
                 if (req_query && req_query.length) {
                     let formatObj: string = ''
-                    for (const item of req_query) {
-                        const { desc, name, required } = item
-                        formatObj += `${desc ? `
-    /** ${desc} */` : ''}
-    ${name}${required == 0 ? '?:' : ':'} string
-`
+                    for (let i = 0; i < req_query.length; i++) {
+                        const { desc, name, required } = req_query[i];
+                        formatObj += `${desc ? `\n${fillIndent(1)}/** ${removeLineBreak(desc)} */` : ''}\n${fillIndent(1)}${name}${required == 0 ? '?:' : ':'} string${i == req_query.length - 1 ? '\n' : ''}`
                     }
-                    formatObj = `{${formatObj}}`
-                    const requestCode = hljs.highlight(formatObj, { language: 'typescript' }).value;
-                    requestCodeRef.current!.innerHTML = requestCode
+                    setCode(requestCodeRef, `{${formatObj}}`)
                 }
+
                 // POST 请求参数
                 if (req_body_other && req_body_other.length) {
                     const { properties: _req_body_other, required: requestRequired } = JSON.parse(req_body_other)
                     const formatObj = getFormatObj(_req_body_other, requestRequired)
-                    const requestCode = hljs.highlight(formatObj, { language: 'typescript' }).value;
-                    requestCodeRef.current!.innerHTML = requestCode
+                    setCode(requestCodeRef, formatObj)
                 }
+
+                // POST 请求参数（文件）
+                if (req_body_form && req_body_form.length) {
+                    let formatObj: string = ''
+                    for (let i = 0; i < req_body_form.length; i++) {
+                        const { desc, name, required, type } = req_body_form[i];
+                        formatObj += `${desc ? `\n${fillIndent(1)}/** ${removeLineBreak(desc)} */` : ''}\n${fillIndent(1)}${name}${required == 0 ? '?:' : ':'} ${TS_TYPE_MAP[type] || 'string'}${i == req_body_form.length - 1 ? '\n' : ''}`
+                    }
+                    setCode(requestCodeRef, `{${formatObj}}`)
+                }
+
                 // 响应数据
                 const { properties: _res_body } = JSON.parse(res_body)
                 if (_res_body) {
                     const formatObj = getFormatObj(_res_body)
-                    const responseCode = hljs.highlight(formatObj, { language: 'typescript' }).value;
-                    responseCodeRef.current!.innerHTML = responseCode
+                    setCode(responseCodeRef, '')
+                    setCode(responseCodeRef, formatObj)
                 }
             })
             .catch(err => {

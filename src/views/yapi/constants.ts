@@ -5,4 +5,5 @@ export const TS_TYPE_MAP: Record<string, string> = {
     integer: 'number',
     object: 'object',
     array: 'array',
+    file: 'File'
 }

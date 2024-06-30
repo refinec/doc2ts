@@ -1,21 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from "react"
-import { Card, Input, Space, Button, message } from "antd"
+import { Card, Input, Space, Button } from "antd"
 import "./index.less"
-import axios from "axios"
-
 import { TS_TYPE_MAP } from '@/views/yapi/constants'
+import instance from "@/api/yapi/index"
 import hljs from 'highlight.js/lib/core';
 import highTS from 'highlight.js/lib/languages/typescript';
 import 'highlight.js/styles/monokai-sublime.min.css'
 hljs.registerLanguage('typescript', highTS);
-
-const instance = axios.create({
-    baseURL: import.meta.env.DEV ? import.meta.env.BASE_URL : '',
-    timeout: 10000,
-    // headers: {
-    //     'X-Custom-Header': 'foobar'
-    // }
-});
 
 const Yapi: React.FC = () => {
     const [cookieValue, setCookieValue] = useState<string>("")
@@ -132,13 +123,8 @@ const Yapi: React.FC = () => {
         
         instance
             .get(import.meta.env.DEV ? `/api?id=${requestQuery}` : `${requestUrl}?id=${requestQuery}`)
-            .then((res: any) => {
-                const { data } = res.data
-                const { req_query, req_body_form, req_body_other, res_body, errmsg } = data || {}
-                if (errmsg) {
-                    message.error(errmsg)
-                    return
-                }
+            .then((data: any) => {
+                const { req_query, req_body_form, req_body_other, res_body } = data || {}
 
                 setCode(requestCodeRef, '')
                 // GET请求参数
@@ -176,8 +162,8 @@ const Yapi: React.FC = () => {
                     setCode(responseCodeRef, formatObj)
                 }
             })
-            .catch(err => {
-                message.error(err?.message || "请求失败")
+            .catch(() => {
+                // message.error(err.message || "请求失败")
             })
     }, [requestUrl, requestQuery])
     return (

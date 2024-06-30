@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { message } from 'antd'
 
-const baseURL: string = import.meta.env.DEV ? import.meta.env.BASE_URL : ''
+const baseURL: string = '/yapi'
 
 const instance = axios.create({
     baseURL,

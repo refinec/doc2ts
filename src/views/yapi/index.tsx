@@ -122,7 +122,7 @@ const Yapi: React.FC = () => {
         }
         
         instance
-            .get(import.meta.env.DEV ? `/api?id=${requestQuery}` : `${requestUrl}?id=${requestQuery}`)
+            .get(`?id=${requestQuery}`)
             .then((data: any) => {
                 const { req_query, req_body_form, req_body_other, res_body } = data || {}
 

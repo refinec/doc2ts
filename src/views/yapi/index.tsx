@@ -87,7 +87,7 @@ const Yapi: React.FC = () => {
         ref.current!.innerHTML = requestCode
     }
 
-    const getFormatObj = (obj: any, requiredArr: string[] = [], recursionCount: number = 1) => {
+    const getFormatObj = useCallback((obj: any, requiredArr: string[] = [], recursionCount: number = 1, type: string = '') => {
         let formatObj: string = ''
         for (const key in obj) {
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -105,15 +105,15 @@ const Yapi: React.FC = () => {
                             properties = {}
                             break
                     }
-                    formatObj += `\n${description ? `${ fillIndent(recursionCount) }/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1)}`
+                    formatObj += `\n${description ? `${ fillIndent(recursionCount) }/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1, type)}`
                     continue
                 }
                 formatObj += `\n${(enumDesc || description) ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description) + (enumDesc ? ` ${removeLineBreak(enumDesc)}` : '')} */\n` : ''}${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`
             }
         }
-        formatObj = `{${formatObj}\n${fillIndent(recursionCount - 1)}}`
+        formatObj = `{${formatObj}\n${fillIndent(recursionCount - 1)}}${type === 'array' ? '[]' : ''}`
         return formatObj
-    }
+    }, [])
 
     const handleToSearch = useCallback(() => {
 
@@ -165,7 +165,7 @@ const Yapi: React.FC = () => {
             .catch(() => {
                 // message.error(err.message || "请求失败")
             })
-    }, [requestUrl, requestQuery])
+    }, [requestUrl, requestQuery, getFormatObj])
     return (
         <section>
             <Card style={{ width: '100%' }}>

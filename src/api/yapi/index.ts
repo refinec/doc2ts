@@ -21,7 +21,7 @@ instance.interceptors.response.use((response: any) => {
         return Promise.resolve(data)
     } else {
         message.error({ content: errmsg, duration: 2 })
-        return Promise.reject(new Error(errmsg))
+        return Promise.reject(response.data)
     }
 }, (error) => {
     const { message } = error

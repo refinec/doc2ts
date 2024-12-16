@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react"
-import { Card, Input, Space, Button } from "antd"
+import { Card, Input, Space, Button, message } from "antd"
 import "./index.less"
 import { TS_TYPE_MAP } from '@/views/yapi/constants'
 import instance from "@/api/yapi/index"
@@ -87,11 +87,12 @@ const Yapi: React.FC = () => {
         ref.current!.innerHTML = requestCode
     }
 
-    const getFormatObj = useCallback((obj: any, requiredArr: string[] = [], recursionCount: number = 1, type: string = '') => {
+    const getFormatObj = useCallback((obj: any, requiredArr: string[] = [], recursionCount: number = 1, type: string = '', sonType: string = '') => {
+        console.log('obj :>> ', obj, type);
         let formatObj: string = ''
         for (const key in obj) {
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                const { type = '', description, enumDesc } = obj[key]
+              const { type = '', description, enumDesc } = obj[key]
                 if (['array', 'object'].includes(type)) {
                     let properties: any
                     switch (type) {
@@ -105,13 +106,14 @@ const Yapi: React.FC = () => {
                             properties = {}
                             break
                     }
-                    formatObj += `\n${description ? `${ fillIndent(recursionCount) }/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1, type)}`
+                    formatObj += `\n${description ? `${ fillIndent(recursionCount) }/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1, type, TS_TYPE_MAP[obj[key].items.type])}`
                     continue
                 }
                 formatObj += `\n${(enumDesc || description) ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description) + (enumDesc ? ` ${removeLineBreak(enumDesc)}` : '')} */\n` : ''}${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`
             }
         }
-        formatObj = `{${formatObj}\n${fillIndent(recursionCount - 1)}}${type === 'array' ? '[]' : ''}`
+      // formatObj = `${formatObj ? `{${formatObj}\n}${fillIndent(recursionCount - 1)}` : sonType}${type === 'array' ? '[]' : ''}`
+        formatObj = formatObj ? `{${formatObj}\n${fillIndent(recursionCount - 1)}}${type === 'array' ? '[]' : ''}` : `${sonType}${type === 'array' ? '[]' : ''}`
         return formatObj
     }, [])
 
@@ -162,10 +164,14 @@ const Yapi: React.FC = () => {
                     setCode(responseCodeRef, formatObj)
                 }
             })
-            .catch(() => {
-                // message.error(err.message || "请求失败")
+          .catch((err: any) => {
+            if (err?.errcode === 40011 && cookieValue) {
+                setCookieValue('')
+                message.error('Cookie已过期，请重新设置')
+              }
             })
-    }, [requestUrl, requestQuery, getFormatObj])
+    }, [requestUrl, requestQuery, getFormatObj, cookieValue])
+  
     return (
         <section>
             <Card style={{ width: '100%' }}>

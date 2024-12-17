@@ -109,7 +109,7 @@ const Yapi: React.FC = () => {
               properties = {}
               break
           }
-          formatObj += `\n${description ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1, type, TS_TYPE_MAP[obj[key].items.type])}`
+          formatObj += `\n${description ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description)} */\n` : ''}${fillIndent(recursionCount)}${key}: ${getFormatObj(properties, [], recursionCount + 1, type, TS_TYPE_MAP[obj[key]?.items?.type])}`
           continue
         }
         formatObj += `\n${(enumDesc || description) ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description) + (enumDesc ? ` ${removeLineBreak(enumDesc)}` : '')} */\n` : ''}${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`

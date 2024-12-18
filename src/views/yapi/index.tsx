@@ -115,7 +115,6 @@ const Yapi: React.FC = () => {
         formatObj += `\n${(enumDesc || description) ? `${fillIndent(recursionCount)}/** ${removeLineBreak(description) + (enumDesc ? ` ${removeLineBreak(enumDesc)}` : '')} */\n` : ''}${fillIndent(recursionCount)}${String(key)}${requiredArr.length ? (requiredArr.includes(key) ? ':' : '?:') : ':'} ${TS_TYPE_MAP[type]}`
       }
     }
-    // formatObj = `${formatObj ? `{${formatObj}\n}${fillIndent(recursionCount - 1)}` : sonType}${type === 'array' ? '[]' : ''}`
     formatObj = formatObj ? `{${formatObj}\n${fillIndent(recursionCount - 1)}}${type === 'array' ? '[]' : ''}` : `${sonType}${type === 'array' ? '[]' : ''}`
     return formatObj
   }, [])
@@ -186,7 +185,7 @@ const Yapi: React.FC = () => {
       <Card style={{ width: '100%', marginTop: 10 }}>
         <Space.Compact style={{ width: '100%' }}>
           <Input addonBefore={"请求接口:"} placeholder="请设置实际请求接口" variant="filled" value={requestUrl} onChange={(e) => handleSetRequestUrl(e.target.value)} allowClear />
-          <Input placeholder="请输入id" variant="filled" value={requestQuery} onChange={(e) => setRequestQuery(e.target.value)} allowClear />
+          <Input placeholder="请输入Yapi地址栏中的id" variant="filled" value={requestQuery} onChange={(e) => setRequestQuery(e.target.value)} allowClear />
           <Button disabled={!requestUrl || !requestQuery} type="primary" onClick={handleToSearch}>搜索</Button>
         </Space.Compact>
         {requestUrl && <div className="url-tip">{`${requestUrl}?id=${requestQuery}`}</div>}

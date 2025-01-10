@@ -23,3 +23,37 @@ pre, code {
     margin: 0;
     height: 100%;
 }
+
+.ant-card-grid.yapi-card-grid.grid-first {
+  position: relative;
+  &::after {
+    pointer-events: none;
+    letter-spacing: 2px;
+    content: "Request";
+    display: block;
+    position: absolute;
+    z-index: 999;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);   
+    font-size: 3rem;
+    color: #363636;
+  }
+}
+
+.ant-card-grid.yapi-card-grid.grid-second {
+  position: relative;
+  &::after {
+    pointer-events: none;
+    letter-spacing: 2px;
+    content: "Response";
+    display: block;
+    position: absolute;
+    z-index: 999;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);   
+    font-size: 3rem;
+    color: #363636;
+  }
+}

@@ -24,7 +24,7 @@ pre, code {
     height: 100%;
 }
 
-.ant-card-grid.yapi-card-grid.grid-first {
+.ant-card-grid.yapi-card-grid.grid-first{
   position: relative;
   &::after {
     pointer-events: none;
@@ -32,16 +32,17 @@ pre, code {
     content: "Request";
     display: block;
     position: absolute;
-    z-index: 999;
+    z-index:1;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);   
     font-size: 5rem;
     color: #363636;
+    mix-blend-mode: color-dodge;
   }
 }
 
-.ant-card-grid.yapi-card-grid.grid-second {
+.ant-card-grid.yapi-card-grid.grid-second{
   position: relative;
   &::after {
     pointer-events: none;
@@ -49,11 +50,12 @@ pre, code {
     content: "Response";
     display: block;
     position: absolute;
-    z-index: 999;
+    z-index: 1;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);   
     font-size: 5rem;
     color: #363636;
+    mix-blend-mode: color-dodge;
   }
 }

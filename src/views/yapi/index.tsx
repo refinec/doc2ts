@@ -1,19 +1,21 @@
-import React, { useRef, useState, useEffect, useCallback } from "react"
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import { Card, Input, Space, Button, message } from "antd"
-import "./index.less"
 import { TS_TYPE_MAP } from '@/views/yapi/constants'
 import instance from "@/api/yapi/index"
+import { debounce } from "lodash-es"
 import hljs from 'highlight.js/lib/core';
 import highTS from 'highlight.js/lib/languages/typescript';
 import 'highlight.js/styles/monokai-sublime.min.css'
+import "./index.less"
 hljs.registerLanguage('typescript', highTS);
 
 const Yapi: React.FC = () => {
   const [cookieValue, setCookieValue] = useState<string>("")
-  const [requestUrl, setRequestUrl] = useState<string>("https://docs.dui88.com/api/interface/get")
+  const [requestUrl, setRequestUrl] = useState<string>(import.meta.env.VITE_YAPI_BASE_URL)
   const [requestQuery, setRequestQuery] = useState<string>()
   const requestCodeRef = useRef<HTMLElement>(null)
   const responseCodeRef = useRef<HTMLElement>(null)
+  const [searchLoading, setSearchLoading] = useState<boolean>(false)
 
   const handleSetCookieValue = useCallback(() => {
     cookieValue.split(";").forEach(item => {
@@ -91,7 +93,6 @@ const Yapi: React.FC = () => {
   }, [])
 
   const getFormatObj = useCallback((obj: any, requiredArr: string[] = [], recursionCount: number = 1, type: string = '', sonType: string = '') => {
-    console.log('obj :>> ', obj, type);
     let formatObj: string = ''
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -119,11 +120,12 @@ const Yapi: React.FC = () => {
     return formatObj
   }, [])
 
-  const handleToSearch = useCallback(() => {
+  const handleToSearch = useMemo(() => debounce(() => {
 
     if (!requestUrl || !requestQuery) {
       return
     }
+    setSearchLoading(true)
 
     instance
       .get(`?id=${requestQuery}`)
@@ -171,22 +173,24 @@ const Yapi: React.FC = () => {
           setCookieValue('')
           message.error('Cookie已过期，请重新设置')
         }
+      }).finally(() => {
+        setSearchLoading(false)
       })
-  }, [requestUrl, requestQuery, getFormatObj, cookieValue, setCode])
+  }, 300), [requestUrl, requestQuery, getFormatObj, cookieValue, setCode])
 
   return (
     <section>
       <Card style={{ width: '100%' }}>
         <Space.Compact style={{ width: '100%' }}>
           <Input addonBefore={"Cookie:"} placeholder="请设置Cookie" variant="filled" value={cookieValue} onChange={(e) => setCookieValue(e.target.value)} allowClear onPressEnter={handleSetCookieValue} />
-          <Button type="primary" onClick={handleSetCookieValue}>设置</Button>
+          <Button type="primary" onClick={handleSetCookieValue}>设置Enter</Button>
         </Space.Compact>
       </Card>
       <Card style={{ width: '100%', marginTop: 10 }}>
         <Space.Compact style={{ width: '100%' }}>
           <Input addonBefore={"请求接口:"} placeholder="请设置实际请求接口" variant="filled" value={requestUrl} onChange={(e) => handleSetRequestUrl(e.target.value)} allowClear />
-          <Input placeholder="请输入Yapi地址栏中的id" variant="filled" value={requestQuery} onChange={(e) => setRequestQuery(e.target.value)} allowClear />
-          <Button disabled={!requestUrl || !requestQuery} type="primary" onClick={handleToSearch}>搜索</Button>
+          <Input placeholder="请输入Yapi地址栏中的id" variant="filled" value={requestQuery} onChange={(e) => setRequestQuery(e.target.value)} onPressEnter={handleToSearch} allowClear />
+          <Button disabled={!requestUrl || !requestQuery} type="primary" onClick={handleToSearch} loading={searchLoading}>搜索Enter</Button>
         </Space.Compact>
         {requestUrl && <div className="url-tip">{`${requestUrl}?id=${requestQuery}`}</div>}
       </Card>
